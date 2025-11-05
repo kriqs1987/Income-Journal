@@ -1,0 +1,5 @@
+{
+  "name": "Dziennik Zarobków (Income Journal)",
+  "description": "A personal finance dashboard to track and analyze salary data from Norwegian payslips. Users can manually input data or upload a payslip (PDF/image) for automatic data extraction using Gemini.",
+  "requestFramePermissions": []
+}
