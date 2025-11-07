@@ -16,7 +16,7 @@ interface ConfirmationState {
 }
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('add');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('history');
   const [editingEntry, setEditingEntry] = useState<SalaryEntry | null>(null);
   const [salaryEntries, setSalaryEntries] = useState<SalaryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,7 +154,7 @@ const App: React.FC = () => {
     <button
       onClick={() => {
         setActiveTab(tabName);
-        if (tabName === 'add') {
+        if (tabName === 'history' && editingEntry) {
             setEditingEntry(null);
         }
       }}
@@ -206,13 +206,24 @@ const App: React.FC = () => {
           </header>
 
           <nav className="mb-8 p-1.5 bg-slate-200 rounded-lg max-w-md mx-auto sm:mx-0 sm:max-w-sm flex gap-2">
-            <TabButton tabName="add" label="Dodaj Wpis" icon={<PlusCircleIcon />} />
             <TabButton tabName="history" label="Historia" icon={<HistoryIcon />} />
+            <TabButton tabName="add" label="Dodaj Wpis" icon={<PlusCircleIcon />} />
           </nav>
 
           <main>
-            {activeTab === 'add' && <AddEntry onSave={handleSaveEntry} entryToEdit={editingEntry} onCancel={handleCancelEdit} />}
-            {activeTab === 'history' && <SalaryHistory entries={salaryEntries} onEdit={handleStartEdit} onDelete={handleDeleteEntry} onImport={handleImportEntries} onDeleteAll={handleDeleteAllEntries} />}
+            {activeTab === 'add' && <AddEntry 
+              onSave={handleSaveEntry} 
+              entryToEdit={editingEntry} 
+              onCancel={handleCancelEdit}
+              entries={salaryEntries}
+              onImport={handleImportEntries}
+              onDeleteAll={handleDeleteAllEntries}
+            />}
+            {activeTab === 'history' && <SalaryHistory 
+              entries={salaryEntries} 
+              onEdit={handleStartEdit} 
+              onDelete={handleDeleteEntry} 
+            />}
           </main>
         </div>
       </div>

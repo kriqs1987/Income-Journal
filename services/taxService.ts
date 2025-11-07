@@ -4,6 +4,7 @@ export interface TaxCalculationResult {
     totalTax: number;
     details: {
         projectedGross: number;
+        // The following are not calculated with the new user-provided formula.
         socialSecurityContribution: number;
         generalTaxableIncome: number;
         generalTax: number;
@@ -12,34 +13,14 @@ export interface TaxCalculationResult {
     }
 }
 
-// Uproszczone stawki i progi na rok 2024.
-// Źródło: Skatteetaten (Norweski Urząd Skarbowy)
-const TAX_YEAR = 2024;
-
-// Składka na ubezpieczenie społeczne (Trygdeavgift)
-const SOCIAL_SECURITY_RATE = 0.079; // 7.9%
-
-// Podatek od dochodu ogólnego (Skatt på alminnelig inntekt)
-const GENERAL_TAX_RATE = 0.22; // 22%
-
-// Odliczenie osobiste (Personfradrag)
-const PERSONAL_ALLOWANCE = 88250;
-
-// Odliczenie z tytułu kosztów uzyskania przychodu (Minstefradrag)
-const STANDARD_DEDUCTION_RATE = 0.46; // 46%
-const STANDARD_DEDUCTION_MAX = 104450;
-
-// Progi podatku progresywnego (Trinnskatt)
-const PROGRESSIVE_TAX_BRACKETS = [
-    { limit: 208050, rate: 0 },       // Krok 0 - poniżej nie ma podatku
-    { limit: 292850, rate: 0.017 },   // Krok 1
-    { limit: 670000, rate: 0.040 },   // Krok 2
-    { limit: 937900, rate: 0.136 },   // Krok 3
-    { limit: 1350000, rate: 0.176 },  // Krok 4
-    { limit: Infinity, rate: 0.178 }, // Krok 5
-];
-
-
+/**
+ * Calculates tax based on a simplified, user-provided bracket system.
+ * This formula does not follow the official Norwegian tax system structure
+ * (e.g., separate social security, general tax, progressive tax) but instead
+ * uses combined marginal rates for different income brackets.
+ * @param projectedGrossIncome The total gross income for the year.
+ * @returns A TaxCalculationResult object with the total calculated tax.
+ */
 export const calculateNorwegianTax = (projectedGrossIncome: number): TaxCalculationResult => {
     if (projectedGrossIncome <= 0) {
         return {
@@ -55,48 +36,33 @@ export const calculateNorwegianTax = (projectedGrossIncome: number): TaxCalculat
         };
     }
 
-    // 1. Składka na ubezpieczenie społeczne (Trygdeavgift)
-    const socialSecurityContribution = projectedGrossIncome * SOCIAL_SECURITY_RATE;
+    let totalTax = 0;
 
-    // 2. Podatek od dochodu ogólnego (Alminnelig inntekt)
-    const standardDeduction = Math.min(projectedGrossIncome * STANDARD_DEDUCTION_RATE, STANDARD_DEDUCTION_MAX);
-    const generalTaxableIncomeBase = projectedGrossIncome - standardDeduction - PERSONAL_ALLOWANCE;
-    const generalTaxableIncome = Math.max(0, generalTaxableIncomeBase);
-    const generalTax = generalTaxableIncome * GENERAL_TAX_RATE;
-    
-    // 3. Podatek progresywny (Trinnskatt)
-    let progressiveTax = 0;
-    let remainingIncome = projectedGrossIncome;
-    let lastLimit = 0;
-    const progressiveTaxBreakdown: { bracket: string; tax: number }[] = [];
-
-    for (const bracket of PROGRESSIVE_TAX_BRACKETS) {
-        if (projectedGrossIncome > lastLimit) {
-            const taxableInBracket = Math.min(projectedGrossIncome, bracket.limit) - lastLimit;
-            if (taxableInBracket > 0 && bracket.rate > 0) {
-                const taxForBracket = taxableInBracket * bracket.rate;
-                progressiveTax += taxForBracket;
-                progressiveTaxBreakdown.push({
-                    bracket: `Krok ${PROGRESSIVE_TAX_BRACKETS.indexOf(bracket)} (${(bracket.rate * 100).toFixed(1)}%)`,
-                    tax: taxForBracket
-                });
-            }
-        }
-        lastLimit = bracket.limit;
+    // This calculation is based on the user's provided Excel formula.
+    if (projectedGrossIncome <= 198349) {
+        totalTax = projectedGrossIncome * 0.22;
+    } else if (projectedGrossIncome <= 279149) {
+        totalTax = (198349 * 0.22) + ((projectedGrossIncome - 198349) * 0.237);
+    } else if (projectedGrossIncome <= 642949) {
+        totalTax = (198349 * 0.22) + ((279149 - 198349) * 0.237) + ((projectedGrossIncome - 279149) * 0.26);
+    } else if (projectedGrossIncome <= 926799) {
+        totalTax = (198349 * 0.22) + ((279149 - 198349) * 0.237) + ((642949 - 279149) * 0.26) + ((projectedGrossIncome - 642949) * 0.355);
+    } else if (projectedGrossIncome <= 1499999) {
+        totalTax = (198349 * 0.22) + ((279149 - 198349) * 0.237) + ((642949 - 279149) * 0.26) + ((926799 - 642949) * 0.355) + ((projectedGrossIncome - 926799) * 0.385);
+    } else { // projectedGrossIncome > 1499999
+        totalTax = (198349 * 0.22) + ((279149 - 198349) * 0.237) + ((642949 - 279149) * 0.26) + ((926799 - 642949) * 0.355) + ((1499999 - 926799) * 0.385) + ((projectedGrossIncome - 1499999) * 0.175);
     }
-
-
-    const totalTax = socialSecurityContribution + generalTax + progressiveTax;
     
     return {
         totalTax: Math.round(totalTax),
         details: {
             projectedGross: projectedGrossIncome,
-            socialSecurityContribution: Math.round(socialSecurityContribution),
-            generalTaxableIncome: Math.round(generalTaxableIncome),
-            generalTax: Math.round(generalTax),
-            progressiveTax: Math.round(progressiveTax),
-            progressiveTaxBreakdown,
+            // These details are not applicable to the new formula.
+            socialSecurityContribution: 0,
+            generalTaxableIncome: 0,
+            generalTax: 0,
+            progressiveTax: 0,
+            progressiveTaxBreakdown: [],
         }
     };
 };
